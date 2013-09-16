@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="lib/jquery-2.0.3.min.js"></script>
+    <script src="lib/json.js"></script>
+    <script src="data/json.json"></script>
+</head>
+<body>
+<style>
+     ul { list-style-type: none; margin: 1em 0; width: 520px; background-color: #cde; padding: 1em; border-radius: 0.5em;  }
+     ul li a { color: Gray; font-size: 90%; text-decoration: none }
+     ul li a:hover { text-decoration: underline }
+     input { background-color: #ffffcc; }
+     input:not([type]), input[type=text] { width: 30em; }
+     input[disabled] { text-decoration: line-through; border-color: Silver; background-color: Silver; }
+     textarea { width: 30em; height: 6em; }
+     form { margin-top: 1em; margin-bottom: 1em; }
+
+</style>
+
+<h3>Tasks</h3>
+<form data-bind="submit: addTask">
+    Add task: <input class="ipt" data-bind="value: newTaskText" placeholder="What needs to be done?" />
+     <button type="submit">Add</button>
+</form>
+<ul class="aipt" data-bind="foreach: tasks, visible: tasks().length > 0">
+    <li>
+        <input type="checkbox" data-bind="checked: isDone" />
+        <input class="ipt" data-bind="value: title, disable: isDone" />
+        <a href="#" data-bind="click: $parent.removeTask">Delete</a>
+    </li>
+</ul>
+You have <b data-bind="text: incompleteTasks().length">&nbsp;</b> incomplete task(s)
+  <span data-bind="visible: incompleteTasks().length == 0"> - it's beer time!</span>
+    <button data-bind="click: save">Save</button>
+
+<script src="lib/knockout-2.3.0.js"></script>
+<script>
+    function Task(data) {
+        this.title = ko.observable(data.title);
+        this.isDone = ko.observable(data.isDone);
+    }
+
+    function TaskListViewModel() {
+       // Data
+        var self = this;
+        self.tasks = ko.observableArray([]);
+        self.newTaskText = ko.observable();
+        self.incompleteTasks = ko.computed(function() {
+            return ko.utils.arrayFilter(self.tasks(), function(task) { return !task.isDone() });
+        });
+
+        // Operations
+        self.addTask = function() {
+            self.tasks.push(new Task({ title: this.newTaskText() }));
+            self.newTaskText("");
+        };
+        self.removeTask = function(task) { self.tasks.remove(task) };
+        self.save = function() {
+            $.ajax("data/json.json", {
+                data: ko.toJSON({ tasks: self.tasks }),
+                type: "post", contentType: "application/json",
+                success: function(result) { alert(result)}
+            });
+        }
+
+        $.getJSON("data/json.json", function(allData) {
+            var mappedTasks = $.map(allData, function(item) { return new Task(item) });
+            self.tasks(mappedTasks);
+        });
+    }
+    ko.applyBindings(new TaskListViewModel());
+</script>
+</body>
+</html>
